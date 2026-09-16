@@ -5,11 +5,20 @@
 本机只负责**训练**：数据在本地录制机器上采集，上传到本机 NFS 后进行微调。
 
 ```
-本地录制机器 (ArmPi Ultra)          GDUT HPC 实例 n1 (1×RTX3090)
-  lerobot-record                       lerobot-train-bf16
-        │                                    ▲
-        │  LeRobotDataset (v3)               │
-        └──── rsync / scp ──► ~/datasets/ ───┘
+┌──────────────────────────────┐
+│ 本地录制机 (ArmPi Ultra)      │
+│   lerobot-record             │
+└───────────────┬──────────────┘
+                │  LeRobotDataset v3
+                │  rsync / scp（不走 HF）
+                ▼
+   ~/MyWork/Lerobot/dataset/<名称>/
+                │
+                ▼
+┌──────────────────────────────┐
+│ GDUT HPC n1  (1×RTX3090)     │
+│   check_dataset.py → 训练     │
+└──────────────────────────────┘
 ```
 
 ---
@@ -29,15 +38,15 @@ python scripts/verify_env.py
 ./scripts/smoke_test.sh
 
 # 3) 数据到位后先校验，再训练
-python scripts/check_dataset.py ~/datasets/pick_cube --decode
+python scripts/check_dataset.py ~/MyWork/Lerobot/dataset/pick_cube --decode
 ./scripts/train_armpi.sh pick_cube 30000
 ```
 
-数据集放在 `/home/zyy00005602/datasets/<数据集目录名>/`，即
+数据集放在 `/home/zyy00005602/MyWork/Lerobot/dataset/<数据集目录名>/`，即
 
 ```bash
 ./scripts/train_armpi.sh pick_cube 30000
-# → 读取 /home/zyy00005602/datasets/pick_cube/
+# → 读取 /home/zyy00005602/MyWork/Lerobot/dataset/pick_cube/
 # → 输出 remote_SmolVLA/outputs/pick_cube_smolvla_0916_1700/
 ```
 
@@ -63,7 +72,7 @@ LEROBOT_BATCH_SIZE=64 LEROBOT_NUM_WORKERS=6 ./scripts/train_armpi.sh pick_cube 3
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `LEROBOT_ENV` | `/home/zyy00005602/.conda/envs/lerobot` | conda 环境前缀 |
-| `LEROBOT_DATASETS_DIR` | `/home/zyy00005602/datasets` | 数据集根目录 |
+| `LEROBOT_DATASETS_DIR` | `/home/zyy00005602/MyWork/Lerobot/dataset` | 数据集根目录 |
 | `LEROBOT_RUNS_DIR` | `<repo>/outputs` | 训练输出根目录 |
 | `LEROBOT_BATCH_SIZE` | `32` | 实测 1 相机峰值 ~5.0 GiB |
 | `LEROBOT_NUM_WORKERS` | `4` | 容器只有 12 核 |
@@ -99,7 +108,7 @@ LEROBOT_BATCH_SIZE=64 LEROBOT_NUM_WORKERS=6 ./scripts/train_armpi.sh pick_cube 3
    采集请在 ArmPi Ultra 本地做，详见 [docs/data-collection.md](docs/data-collection.md)。
 
 3. **数据集别推 HuggingFace。** `hf-mirror.com` 是只读镜像不支持上传，`huggingface.co` 又被墙。
-   用 rsync/scp 传到 `~/datasets/`。
+   用 rsync/scp 传到 `~/MyWork/Lerobot/dataset/`。
 
 ---
 

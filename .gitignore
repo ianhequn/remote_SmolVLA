@@ -1,6 +1,7 @@
 # ---- SmolVLA 训练产物（体积大，不入库）----
 outputs/
 datasets/
+dataset/
 wandb/
 *.safetensors
 *.mp4

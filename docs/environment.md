@@ -142,12 +142,12 @@ base 配置 `train_expert_only=True` / `freeze_vision_encoder=True`：
 详见 [data-collection.md](data-collection.md)。要点：
 
 1. **lerobot 版本要对齐 0.6.1**。本机数据集 `codebase_version = v3.0`，录制端用别的版本可能 schema 不兼容。
-2. 目录放 `/home/zyy00005602/datasets/<名字>/`（NFS，142T）。
+2. 目录放 `/home/zyy00005602/MyWork/Lerobot/dataset/<名字>/`（NFS，142T）。
 3. **不要把数据集 push 到 HF**：`hf-mirror.com` 是只读镜像，不支持上传；`huggingface.co` 又被墙。用 rsync/scp。
 4. 录制端默认视频编码是 **`libsvtav1`（AV1）**——在树莓派上编码很吃 CPU。如果掉帧，
    在录制端把 `rgb_encoder` 换成 h264（`lerobot.configs.video.RGBEncoderConfig`）。
 5. ArmPi Ultra 只有 1 路相机，SmolVLA 会把缺失的 camera2/camera3 用空图 + `img_masks=False` 屏蔽掉，**不需要改配置**（已实测）。
-6. **训练前务必跑** `python scripts/check_dataset.py ~/datasets/<名字> --decode`。
+6. **训练前务必跑** `python scripts/check_dataset.py ~/MyWork/Lerobot/dataset/<名字> --decode`。
 
 ## 8. 怎么开始训练
 
@@ -160,7 +160,7 @@ cd /home/zyy00005602/MyWork/Lerobot/remote_SmolVLA
 python scripts/verify_env.py --quick
 ./scripts/smoke_test.sh
 
-# 数据放到 ~/datasets/my_armpi/ 并校验通过之后:
-python scripts/check_dataset.py ~/datasets/my_armpi --decode
+# 数据放到 ~/MyWork/Lerobot/dataset/my_armpi/ 并校验通过之后:
+python scripts/check_dataset.py ~/MyWork/Lerobot/dataset/my_armpi --decode
 ./scripts/train_armpi.sh my_armpi 30000
 ```

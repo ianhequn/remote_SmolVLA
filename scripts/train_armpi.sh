@@ -16,7 +16,7 @@
 #
 # 可用环境变量覆盖默认值:
 #   LEROBOT_ENV            conda 环境前缀   默认 /home/zyy00005602/.conda/envs/lerobot
-#   LEROBOT_DATASETS_DIR   数据集根目录     默认 /home/zyy00005602/datasets
+#   LEROBOT_DATASETS_DIR   数据集根目录     默认 /home/zyy00005602/MyWork/Lerobot/dataset
 #   LEROBOT_RUNS_DIR       训练输出根目录   默认 <repo>/outputs
 # =============================================================================
 set -euo pipefail
@@ -24,7 +24,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 LEROBOT_ENV="${LEROBOT_ENV:-/home/zyy00005602/.conda/envs/lerobot}"
-LEROBOT_DATASETS_DIR="${LEROBOT_DATASETS_DIR:-/home/zyy00005602/datasets}"
+LEROBOT_DATASETS_DIR="${LEROBOT_DATASETS_DIR:-/home/zyy00005602/MyWork/Lerobot/dataset}"
 LEROBOT_RUNS_DIR="${LEROBOT_RUNS_DIR:-${REPO_ROOT}/outputs}"
 
 # 依据本机实测（1 相机、bf16、chunk_size=50）: batch 32 峰值 ~5.0 GiB, 64 峰值 ~8.7 GiB

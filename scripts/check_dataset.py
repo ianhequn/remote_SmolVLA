@@ -5,8 +5,8 @@
 
 用法：
     conda activate /home/zyy00005602/.conda/envs/lerobot
-    python scripts/check_dataset.py ~/datasets/pick_cube
-    python scripts/check_dataset.py ~/datasets/pick_cube --decode   # 额外抽帧解码（较慢）
+    python scripts/check_dataset.py ~/MyWork/Lerobot/dataset/pick_cube
+    python scripts/check_dataset.py ~/MyWork/Lerobot/dataset/pick_cube --decode   # 额外抽帧解码（较慢）
 
 退出码：0 = 通过（可能有 warning），1 = 有 error，不能训练。
 """

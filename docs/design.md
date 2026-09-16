@@ -39,7 +39,7 @@ SmolVLA 在 GDUT HPC 实例 `n1` 上的微调方案设计。
                                     ▼
    ┌────────────────────────────────────────────────────────────────┐
    │  GDUT HPC  n1  (Nomad 容器)                                     │
-   │   /home/zyy00005602/datasets/<name>/          ← NFS 142T         │
+   │   ~/MyWork/Lerobot/dataset/<name>/           ← NFS 142T         │
    │            │                                                    │
    │            ▼                                                    │
    │   lerobot-train-bf16  ──►  SmolVLA 微调  ──►  checkpoints/      │
@@ -159,7 +159,7 @@ ArmPi Ultra 只有 1 路相机，但 base 配置声明了 3 路。**不需要改
 
 | 项 | 约定 |
 |---|---|
-| 数据集位置 | `${LEROBOT_DATASETS_DIR}/<name>/`，默认 `~/datasets/` |
+| 数据集位置 | `${LEROBOT_DATASETS_DIR}/<name>/`，默认 `~/MyWork/Lerobot/dataset/` |
 | `repo_id` | 本地训练统一用 `local/<name>`（避免误触发 Hub 上传） |
 | 训练输出 | `${LEROBOT_RUNS_DIR}/<name>_smolvla_<月日_时分>/` |
 | checkpoint | `.../checkpoints/last/pretrained_model/` |

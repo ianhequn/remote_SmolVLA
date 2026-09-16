@@ -117,8 +117,8 @@ def main() -> int:
     print("   单独拿它训练:")
     print(f"     LEROBOT_DATASETS_DIR={root.parent} ./scripts/train_armpi.sh {root.name} 20")
     print()
-    print("   用完删掉:")
-    print(f"     rm -rf {root.parent}")
+    print("   用完删掉（只删这个合成数据集，别手滑删到父目录）:")
+    print(f"     rm -rf {root}")
     return 0
 
 

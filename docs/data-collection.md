@@ -10,11 +10,16 @@ ArmPi Ultra 六轴机械臂（1 路 RGB 相机）的数据采集流程，以及�
 ## 1. 总体流程
 
 ```
-①录制机准备             ②采集                    ③上传                    ④校验
-─────────────      ────────────────      ────────────────      ────────────────
-装 lerobot 0.6.1    lerobot-record         rsync/scp              check_dataset.py
-写 Robot 插件  ──►  多 episode 遥操作  ──►  到 ~/datasets/   ──►  通过 → 训练
-标定                 (每集一个 task)        (不走 HF Hub)
+① 录制机准备   装 lerobot 0.6.1 / 写 Robot 插件 / 相机与关节标定
+      │
+      ▼
+② 采集         lerobot-record，多个 episode，每集固定一条 task
+      │
+      ▼
+③ 上传         rsync / scp 到本机 ${LEROBOT_DATASETS_DIR}/（不走 HF Hub）
+      │
+      ▼
+④ 校验         check_dataset.py 通过 ➜ 开始训练
 ```
 
 ---
@@ -167,7 +172,7 @@ from lerobot.configs.video import RGBEncoderConfig
 # 在录制机上，把数据集推到 HPC
 rsync -avP --exclude='.cache/' \
     ~/.cache/huggingface/lerobot/local/pick_cube/ \
-    zyy00005602@<hpc-host>:/home/zyy00005602/datasets/pick_cube/
+    zyy00005602@<hpc-host>:/home/zyy00005602/MyWork/Lerobot/dataset/pick_cube/
 ```
 
 要点：
@@ -176,7 +181,7 @@ rsync -avP --exclude='.cache/' \
   `huggingface.co` 在本机被墙。只能走 rsync/scp。
 - **排除 `.cache/`**：LeRobotDataset 目录里的 `.cache/` 是本地索引缓存，传过去反而可能不一致。
 - 加 `-P` 显示进度并支持断点续传；传输中断产生的 0 字节文件会被第 8 步的校验抓到。
-- 目录名就是训练脚本的第一个参数：`~/datasets/pick_cube/` → `./scripts/train_armpi.sh pick_cube`
+- 目录名就是训练脚本的第一个参数：`~/MyWork/Lerobot/dataset/pick_cube/` → `./scripts/train_armpi.sh pick_cube`
 
 ---
 
@@ -187,7 +192,7 @@ source /opt/conda/etc/profile.d/conda.sh
 conda activate /home/zyy00005602/.conda/envs/lerobot
 cd /home/zyy00005602/MyWork/Lerobot/remote_SmolVLA
 
-python scripts/check_dataset.py ~/datasets/pick_cube --decode
+python scripts/check_dataset.py ~/MyWork/Lerobot/dataset/pick_cube --decode
 ```
 
 它会检查：
