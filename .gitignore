@@ -1,0 +1,20 @@
+# ---- SmolVLA 训练产物（体积大，不入库）----
+outputs/
+datasets/
+wandb/
+*.safetensors
+*.mp4
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+.DS_Store
