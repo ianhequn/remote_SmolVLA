@@ -124,8 +124,62 @@ base 配置默认 `train_expert_only=True`、`freeze_vision_encoder=True`
 
 ArmPi Ultra 只有 1 路相机，但 base 配置声明了 3 路。**不需要改配置**：
 
-`SmolVLAPolicy.prepare_images()` 会把 batch 里缺失的 `observation.images.cameraN`
-补成空图并置 `img_masks=False`，在注意力里屏蔽掉。已实测跑通（见 `docs/environment.md`）。
+base config 里 `empty_cameras = 0`（`configuration_smolvla.py` 的默认值），而
+`prepare_images()` 补空图的循环第一轮就 `break`：
+
+```python
+for num_empty_cameras in range(len(missing_img_keys)):
+    if num_empty_cameras >= self.config.empty_cameras:   # 0 >= 0 → 立刻 break
+        break
+```
+
+也就是说缺失的相机**根本不会被补进来**，实际只喂 batch 里存在的那几路。
+实测：只给 1 路相机时，送进模型的图片数是 **1**（`shape=(B, 3, 512, 512)`，mask 全 True），
+既没有占位空图也不浪费算力。
+
+代价是**相机键名必须匹配**，见 4.5。
+
+### 4.5 相机命名与 rename_map
+
+base config 把 `image_features` 写死为 `camera1 / camera2 / camera3`，又因为 `empty_cameras=0`
+（缺失相机不补位），数据集里的相机键名**必须落在这个集合内**。有**两处**会拦住你：
+
+| 关卡 | 位置 | 行为 |
+|---|---|---|
+| 训练前校验 | `make_policy()` → `validate_visual_features_consistency()` | 不匹配 → `ValueError: Feature mismatch` |
+| 运行时取图 | `SmolVLA.prepare_images()` | 按 key 匹配 `config.image_features`，全不认 → `ValueError: All image features are missing from the batch` |
+
+判定规则不是“必须完全相等”，而是「数据集相机集合」与「policy 相机集合」
+**任意一边是另一边的子集**即放行：
+
+| 数据集相机名 | 直接跑 |
+|---|---|
+| `camera1` / `camera2` / `camera3` | ✅ 单个也行，不要求连号 |
+| `camera1` + `camera3` | ✅ 子集 |
+| `front` | ❌ 互不包含 |
+| `front` + `camera1` | ❌ 仍然互不包含 |
+
+**决策：不改数据集，在训练脚本里自动补 `--rename_map`。**
+
+`train_armpi.sh` 读 `<数据集>/meta/info.json` 的 `features`，筛出 `observation.images.*` 排序，
+第 i 个映射成 `camera{i+1}`；已经合规就不生成任何参数（no-op）。相机数 > 3 直接报错退出，不静默丢相机。
+
+理由：
+
+- 不动物理数据，可逆，可追溯（映射写进 checkpoint 的 `train_config.json`）
+- 以后按规范录的数据集（相机就叫 `camera1`）自动 no-op，不用删代码
+- 官方支持路径：`make_policy(rename_map=...)` + `RenameObservationsProcessorStep`，且
+  `lerobot_train.py` 把 `cfg.rename_map` 同时传给 policy 和 preprocessor pipeline
+
+**副作用（重要）**：映射会被烘进 checkpoint 的 `policy_preprocessor.json` 第一步，所以
+
+- 部署侧 **原样喂 `observation.images.front`** 也能跑（preprocessor 会改名）
+- 但更好的是在 ArmPi 的 robot 配置里直接把相机键名定义成 `observation.images.camera1`，
+  以后录制 → 训练 → 部署全程不需要任何映射
+- 多相机时“按名字排序映射”如果和部署侧不一致，会**静默把两路相机调换**——不报错，只是效果变差。
+  1 路相机没有这个问题。
+
+详细部署约定见 [deployment-notes.md](deployment-notes.md)。
 
 ---
 
@@ -154,6 +208,10 @@ ArmPi Ultra 只有 1 路相机，但 base 配置声明了 3 路。**不需要改
 | `action` | `float32` | `(6,)` + `names` |
 | `observation.images.camera1` | `video` | `(256, 256, 3)` |
 | `task` | str（每帧） | 语言指令 |
+
+真实数据集 `armpi_train_v1` 的差异：相机键名是 `observation.images.front`（需 rename，见 4.5），
+分辨率 480×640（训练时内部 resize+pad 到 512×512，分辨率不影响显存/耗时），
+`names` 为 `joint1.pos … joint5.pos, r_joint.pos`。参见 README 的“当前数据集”表。
 
 ### 5.3 目录与命名约定
 
@@ -226,19 +284,21 @@ ArmPi Ultra 只有 1 路相机，但 base 配置声明了 3 路。**不需要改
 ## 7. 目录结构设计
 
 ```
-Lerobot/
-├── README.md                  # 入口：快速开始 + 脚本表 + 三条铁律
+remote_SmolVLA/
+├── README.md                  # 入口：快速开始 + 相机命名坑 + 脚本表
 ├── scripts/                   # 所有可执行物，零散落在根目录不利于交接
-│   ├── train_armpi.sh         #   唯一训练入口（封装了 bf16 包装脚本和全部必需参数）
+│   ├── train_armpi.sh         #   唯一训练入口（bf16 包装 + 环境变量 + 自动相机映射）
 │   ├── smoke_test.sh          #   自检：合成数据 + 20 步训练 + 回读 + 自动清理
 │   ├── verify_env.py          #   --quick 模式供 smoke_test 复用
+│   ├── check_dataset.py       #   上传上来的真实数据集校验
 │   ├── bench_train_mem.py     #   显存基准，定 batch_size 用
 │   └── make_dummy_dataset.py  #   既做夹具又做格式文档
-├── docs/                      # 设计/环境/数据采集三份文档
+├── docs/                      # 设计 / 环境 / 采集 / 部署 四份文档
 ├── lerobot_doc/               # 官方原文（安装 & 自定义硬件），保留以便对照上游变化
-├── remote_SmolVLA/            # 部署侧独立 git 仓库，被 .gitignore 排除
 └── outputs/                   # 训练产物，gitignore
 ```
+
+数据集不在仓库里，固定放 `/home/zyy00005602/MyWork/Lerobot/dataset/`（NFS，142T）。
 
 **为什么脚本里硬编码 `/home/zyy00005602/...` 作为默认值**：这台机器是单用户固定路径，默认值写死好用；
 但都留了 `LEROBOT_*` 环境变量可覆盖，换机器不用改脚本。
